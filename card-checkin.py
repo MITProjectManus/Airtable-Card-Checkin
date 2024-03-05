@@ -8,18 +8,14 @@ import time
 from secrets import secrets, site, question
 import tkinter as tk
 from datetime import datetime
-#from pyairtable import Table
 from pyairtable import Api
 from pyairtable.formulas import match
 
 # Setup link to Airtable.  Better way to define base and table?
 api_key = secrets['airtable_pat']
 api = Api(api_key)
-#sessions_table = Table(api_key,'appFhdhKmHkXVmAlE','tblEqGLp1P9krioA5')
 sessions_table = api.table('appFhdhKmHkXVmAlE','tblEqGLp1P9krioA5')
-#makers_table = Table(api_key,'appFhdhKmHkXVmAlE','tblPyVSF6CHM4OY3O')
 makers_table = api.table('appFhdhKmHkXVmAlE','tblPyVSF6CHM4OY3O')
-#makerspace_table = Table(api_key,'appFhdhKmHkXVmAlE','tblXLR9oHwbhsne1p')
 makerspace_table = api.table('appFhdhKmHkXVmAlE','tblXLR9oHwbhsne1p')
 
 # setup People API info
@@ -40,6 +36,10 @@ site_name = site['name']
 site_description = site['description']
 site_color_1 = site['color-1']
 site_color_2 = site['color-2']
+# Get makerspaceID
+formula = match({'Name':site_name})
+result = makerspace_table.all(formula=formula)
+makerspace_id = result[0]['id']
 
 def get_new_token():
 	logging.captureWarnings(True)
@@ -96,10 +96,10 @@ def check_in(user,answer):
 	formula = match({'Kerberos Name':user})
 	result = makers_table.all(formula=formula)
 	maker_id = result[0]['id']
-	# Get makerspaceID
-	formula = match({'Name':site_name})
-	result = makerspace_table.all(formula=formula)
-	makerspace_id = result[0]['id']
+#	# Get makerspaceID
+#	formula = match({'Name':site_name})
+#	result = makerspace_table.all(formula=formula)
+#	makerspace_id = result[0]['id']
 	update = {}
 	update['Maker'] = [maker_id]
 	update['Makerspace'] = [makerspace_id]
