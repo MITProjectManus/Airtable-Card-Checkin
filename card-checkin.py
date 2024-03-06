@@ -60,8 +60,8 @@ def get_new_token():
 	tokens = json.loads(token_response.text)
 	return tokens['access_token']
 
-token = get_new_token()
-card_headers = {'Authorization' : 'Bearer {}'.format(token)}
+#token = get_new_token()
+#card_headers = {'Authorization' : 'Bearer {}'.format(token)}
 
 # Create a window
 window = tk.Tk()
@@ -72,6 +72,8 @@ window.geometry('480x800')  # Raspberry Pi Display, portrait mode
 # Retrieve Kerberos ID for an given card ID
 def card_to_kerb(card_id):
 	query = {'id' : card_id}
+	token = get_new_token()
+	card_headers = {'Authorization' : 'Bearer {}'.format(token)}
 	response = requests.post(card_endpoint, json = query, headers = card_headers)
 	if response.status_code != 200:
 		print ('Invalid ID. Response code: {}'.format(response.status_code))
