@@ -132,7 +132,7 @@ def check_out(user):
 	update['Checked Out'] = timestamp.strftime(time_format)
 	print(update)
 	sessions_table.update(session_id,update)
-	notify_message.config(text = 'You\'re checked out! Have a good day!')
+	notify_message.config(text = 'You\'re checked out!\nHave a good day!')
 	window.update_idletasks()
 	window.update()
 	time.sleep(3)
@@ -156,6 +156,18 @@ def handle_card_tap(event):
 		frm_invalid_id.pack_forget()
 		frm_screen_1.pack(pady=(200,0))
 	else:
+		# Is user a maker in Airtable?
+		email = kerb_id + '@mit.edu'
+		formula = match({'Email':email})
+		result = makers_table.all(formula=formula)
+		if result == []:
+			# user is not a maker in Airtable so add them
+			print('"{}" is not an active maker, adding them.'.format(email))
+			update = {}
+			update['Email'] = email
+			makers_table.create(update)
+		else:
+			print('"{}" is an active maker.'.format(email))
 		if (not user_checked_in(kerb_id)):
 			frm_screen_1.pack_forget()
 			frm_screen_4.pack(pady=(120,0))
