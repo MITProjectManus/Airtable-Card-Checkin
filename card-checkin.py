@@ -83,7 +83,7 @@ def card_to_kerb(card_id):
 #		print('Name:\t\t{} {}'.format(res['firstName'],res['lastName']))
 #		print('Kerberos ID:\t{}'.format(res['krbName']))
 #		print('MIT ID:\t\t{}'.format(res['mitid']))
-		return(res['krbName'])
+		return(res['krbName'].lower())
 
 def user_checked_in(user):
 	formula = match({'Kerberos Name':user,'Checked Out':'','Makerspace':site_name})
@@ -94,6 +94,11 @@ def user_checked_in(user):
 		return(True)
 
 def check_in(user,answer):
+	frm_screen_4.pack_forget()
+	frm_notify.pack(pady=(200,0))
+	notify_message.config(text = 'One moment...')
+	window.update_idletasks()
+	window.update()
 	# Get makerID
 	formula = match({'Kerberos Name':user})
 	result = makers_table.all(formula=formula)
@@ -108,8 +113,17 @@ def check_in(user,answer):
 	update['Survey Response'] = answer
 	print(update)
 	sessions_table.create(update)
-
+	notify_message.config(text = 'You\'re checked in!')
+	window.update_idletasks()
+	window.update()
+	time.sleep(3)
+	
 def check_out(user):
+	frm_screen_1.pack_forget()
+	frm_notify.pack(pady=(200,0))
+	notify_message.config(text = 'One moment...')
+	window.update_idletasks()
+	window.update()
 	timestamp = datetime.utcnow()
 	formula = match({'Kerberos Name':user,'Checked Out':'','Makerspace':site_name})
 	result = sessions_table.all(formula=formula)
@@ -118,6 +132,10 @@ def check_out(user):
 	update['Checked Out'] = timestamp.strftime(time_format)
 	print(update)
 	sessions_table.update(session_id,update)
+	notify_message.config(text = 'You\'re checked out! Have a good day!')
+	window.update_idletasks()
+	window.update()
+	time.sleep(3)
 
 
 # Process a card tap
@@ -129,7 +147,6 @@ def handle_card_tap(event):
 	card_id = tmp_id.split('=')[1]
 #print (card_id)
 	kerb_id = card_to_kerb(card_id)
-#	print (kerb_id)
 	if (kerb_id == 'INVALID_ID' or kerb_id == None): # restart if invalid card or Kerberos ID
 		frm_screen_1.pack_forget()
 		frm_invalid_id.pack(pady=(200,0))
@@ -152,11 +169,13 @@ def handle_card_tap(event):
 			if an == 'na':
 				print('Checkin ',kerb_id,'\tna')
 				check_in(kerb_id,'na')
-			frm_screen_4.pack_forget()
+			frm_notify.pack_forget()
 			frm_screen_1.pack(pady=(200,0))
 		else:
 			print('Checkout ',kerb_id)
 			check_out(kerb_id)
+			frm_notify.pack_forget()
+			frm_screen_1.pack(pady=(200,0))
 	entry_tap.delete(0,tk.END)
 	entry_tap.focus_set()
 
@@ -166,7 +185,7 @@ def handle_answer(ans):
 	an = ans.lower()
 	print('Checkin ',kerb_id,'\t',an)
 	check_in(kerb_id,an)
-	frm_screen_4.pack_forget()
+	frm_notify.pack_forget()
 	frm_screen_1.pack(pady=(200,0))
 	entry_tap.delete(0,tk.END)
 	entry_tap.focus_set()
@@ -207,6 +226,12 @@ for i,j in enumerate(ab):
 reset_question = tk.Button(master=frm_screen_4,text = 'RESTART',font = ('Arial',20), height = 2)
 reset_question.grid(column=0,row=i+5,sticky='ew')
 
+# Define frame for notifications
+frm_notify = tk.Frame(master=window)
+frm_notify.columnconfigure([0], minsize='460')
+frm_notify.rowconfigure([0,1,2,3,4,5,6,7], minsize='75')
+notify_message = tk.Label(master=frm_notify,font=('Arial',25))
+notify_message.grid(column=0, row=0, sticky='ew', columnspan=2)
 
 entry_tap.bind('<Return>',handle_card_tap)
 
