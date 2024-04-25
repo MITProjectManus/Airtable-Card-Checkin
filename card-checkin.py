@@ -142,6 +142,12 @@ def check_out(user):
 def handle_card_tap(event):
 	global kerb_id
 	global an
+	# Put up a 'One moment...' screen
+	frm_screen_1.pack_forget()
+	frm_notify.pack(pady=(200,0))
+	notify_message.config(text = 'One moment...')
+	window.update_idletasks()
+	window.update()
 	an = 'na'
 	tmp_id = entry_tap.get().lower()
 	card_id = tmp_id.split('=')[1]
@@ -169,7 +175,7 @@ def handle_card_tap(event):
 		else:
 			print('"{}" is an active maker.'.format(email))
 		if (not user_checked_in(kerb_id)):
-			frm_screen_1.pack_forget()
+			frm_notify.pack_forget()
 			frm_screen_4.pack(pady=(120,0))
 			window.update_idletasks()
 			window.update()
