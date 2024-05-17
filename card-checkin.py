@@ -5,7 +5,7 @@ import requests
 import json
 import logging
 import time
-from secrets import secrets, site, question
+from secrets import secrets, site, question, logs
 import tkinter as tk
 from datetime import datetime
 from pyairtable import Api
@@ -30,6 +30,11 @@ time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
 kerb_id = ""
 an = "na"
 
+# setup logging
+logfile = logs['logfile']
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',filename=logfile, level=logging.DEBUG)
+
+
 # Get site info
 site_title = site['title']
 site_name = site['name']
@@ -37,9 +42,11 @@ site_description = site['description']
 site_color_1 = site['color-1']
 site_color_2 = site['color-2']
 # Get makerspaceID
+logging.debug('fetch makerspace ID')
 formula = match({'Name':site_name})
 result = makerspace_table.all(formula=formula)
 makerspace_id = result[0]['id']
+logging.debug('received makerspace ID %s', makerspace_id)
 
 def get_new_token():
 	logging.captureWarnings(True)
@@ -48,15 +55,15 @@ def get_new_token():
 	card_client_secret = secrets['card_client_secret']
 	token_req_payload = {'grant_type': 'client_credentials', 'scope' :
 	'mit:system:profile.read-by-card'}
-
+	logging.debug('fetch card API access token')
 	token_response = requests.post(auth_server_url,
 	data=token_req_payload, verify=False, allow_redirects=False,
 	auth=(card_client_id, card_client_secret))
 			 
 	if token_response.status_code !=200:
-				print("Failed to obtain token from the OAuth 2.0 server", file=sys.stderr)
+				logging.debug("Failed to obtain token from the OAuth 2.0 server %s", file=sys.stderr)
 				sys.exit(1)
-#	print("Successfuly obtained a new token")
+	logging.debug("Successfuly obtained a new token")
 	tokens = json.loads(token_response.text)
 	return tokens['access_token']
 
@@ -74,23 +81,27 @@ def card_to_kerb(card_id):
 	query = {'id' : card_id}
 	token = get_new_token()
 	card_headers = {'Authorization' : 'Bearer {}'.format(token)}
+	logging.debug('fetch Kerberos ID for card %s', card_id)
 	response = requests.post(card_endpoint, json = query, headers = card_headers)
 	if response.status_code != 200:
-		print ('Invalid ID. Response code: {}'.format(response.status_code))
+		logging.debug('Invalid ID. Response code: %s',response.status_code)
 		return('INVALID_ID')
 	else:
 		res = json.loads(response.text)
 #		print('Name:\t\t{} {}'.format(res['firstName'],res['lastName']))
-#		print('Kerberos ID:\t{}'.format(res['krbName']))
+		logging.debug('Kerberos ID:%s',res['krbName'])
 #		print('MIT ID:\t\t{}'.format(res['mitid']))
 		return(res['krbName'].lower())
 
 def user_checked_in(user):
+	logging.debug('Is %s checked in?',user)
 	formula = match({'Kerberos Name':user,'Checked Out':'','Makerspace':site_name})
 	result = sessions_table.all(formula=formula)
 	if result == []:
+		logging.debug('%s not checked in',user)
 		return(False)
 	else:
+		logging.debug('%s is checked in',user)
 		return(True)
 
 def check_in(user,answer):
@@ -99,20 +110,20 @@ def check_in(user,answer):
 	notify_message.config(text = 'One moment...')
 	window.update_idletasks()
 	window.update()
+	logging.debug('check in user %s answer %s',user,answer)
 	# Get makerID
+	logging.debug('get makerID for user %s',user)
 	formula = match({'Kerberos Name':user})
 	result = makers_table.all(formula=formula)
 	maker_id = result[0]['id']
-#	# Get makerspaceID
-#	formula = match({'Name':site_name})
-#	result = makerspace_table.all(formula=formula)
-#	makerspace_id = result[0]['id']
+	logging.debug('makerID %s received',maker_id)
 	update = {}
 	update['Maker'] = [maker_id]
 	update['Makerspace'] = [makerspace_id]
 	update['Survey Response'] = answer
-	print(update)
+	logging.debug('updating sessions table with %s',update)
 	sessions_table.create(update)
+	logging.debug('sessions table updated')
 	notify_message.config(text = 'You\'re checked in!')
 	window.update_idletasks()
 	window.update()
@@ -124,14 +135,18 @@ def check_out(user):
 	notify_message.config(text = 'One moment...')
 	window.update_idletasks()
 	window.update()
+	logging.debug('check out user %s',user)
 	timestamp = datetime.utcnow()
+	logging.debug('get sessionID for user %s',user)
 	formula = match({'Kerberos Name':user,'Checked Out':'','Makerspace':site_name})
 	result = sessions_table.all(formula=formula)
 	session_id = result[0]['id']
+	logging.debug('sessionID %s received',session_id)
 	update = {}
 	update['Checked Out'] = timestamp.strftime(time_format)
-	print(update)
+	logging.debug('updating sessions table with %s',update)
 	sessions_table.update(session_id,update)
+	logging.debug('sessions table updated')
 	notify_message.config(text = 'You\'re checked out!\nHave a good day!')
 	window.update_idletasks()
 	window.update()
@@ -151,29 +166,34 @@ def handle_card_tap(event):
 	an = 'na'
 	tmp_id = entry_tap.get().lower()
 	card_id = tmp_id.split('=')[1]
-#print (card_id)
+	logging.debug('processing card tap %s',card_id)
 	kerb_id = card_to_kerb(card_id)
 	if (kerb_id == 'INVALID_ID' or kerb_id == None): # restart if invalid card or Kerberos ID
-		frm_screen_1.pack_forget()
+		logging.debug("Invalid ID")
+		frm_notify.pack_forget()
 		frm_invalid_id.pack(pady=(200,0))
 		window.update_idletasks()
 		window.update()
 		time.sleep(5)
 		frm_invalid_id.pack_forget()
 		frm_screen_1.pack(pady=(200,0))
+		window.update_idletasks()
+		window.update()
 	else:
 		# Is user a maker in Airtable?
 		email = kerb_id + '@mit.edu'
+		logging.debug('Is %s a maker',email)
 		formula = match({'Email':email})
 		result = makers_table.all(formula=formula)
 		if result == []:
 			# user is not a maker in Airtable so add them
-			print('"{}" is not an active maker, adding them.'.format(email))
+			logging.debug('%s is not an active maker, adding them.',email)
 			update = {}
 			update['Email'] = email
 			makers_table.create(update)
+			logging.debug('%s added',email)
 		else:
-			print('"{}" is an active maker.'.format(email))
+			logging.debug('%s is an active maker.',email)
 		if (not user_checked_in(kerb_id)):
 			frm_notify.pack_forget()
 			frm_screen_4.pack(pady=(120,0))
@@ -189,13 +209,20 @@ def handle_card_tap(event):
 				check_in(kerb_id,'na')
 			frm_notify.pack_forget()
 			frm_screen_1.pack(pady=(200,0))
+			window.update_idletasks()
+			window.update()
 		else:
 			print('Checkout ',kerb_id)
 			check_out(kerb_id)
 			frm_notify.pack_forget()
 			frm_screen_1.pack(pady=(200,0))
+			window.update_idletasks()
+			window.update()
+
 	entry_tap.delete(0,tk.END)
 	entry_tap.focus_set()
+	window.update_idletasks()
+	window.update()
 
 def handle_answer(ans):
 # If question is answered process here
@@ -207,6 +234,9 @@ def handle_answer(ans):
 	frm_screen_1.pack(pady=(200,0))
 	entry_tap.delete(0,tk.END)
 	entry_tap.focus_set()
+	window.update_idletasks()
+	window.update()
+
 
 # Define frame for first screen
 frm_screen_1 = tk.Frame(master=window)
