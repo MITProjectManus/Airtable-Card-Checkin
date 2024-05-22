@@ -42,4 +42,12 @@ question = {
         # leave 'freeform' blank to skip asking this question
         'freeform' : 'or enter class number'
 }
+
+#
+# Full path to log file.  Null logs to stdio
+#
+logs = {
+        'logfile' : ''
+}
+
 ```
