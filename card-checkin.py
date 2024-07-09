@@ -5,11 +5,20 @@ import requests
 import json
 import logging
 import time
+import argparse
+import struct
 from secrets import secrets, site, question, logs
 import tkinter as tk
 from datetime import datetime
 from pyairtable import Api
 from pyairtable.formulas import match
+
+# Setup command line parser
+use_hid = False
+parser = argparse.ArgumentParser(description='Card-tap checkin kiosk.')
+parser.add_argument('-H',help='use HID Omnikey reader',dest='use_hid',action='store_true')
+args = parser.parse_args()
+use_hid = args.use_hid
 
 # Setup link to Airtable.  Better way to define base and table?
 api_key = secrets['airtable_pat']
@@ -33,6 +42,21 @@ an = "na"
 # setup logging
 logfile = logs['logfile']
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',filename=logfile, level=logging.DEBUG)
+
+logging.debug('use HID is %s', use_hid)
+#
+# A function to convert taps from the HID OMNIKEY to the Cypress Wedge format
+#
+def hid_to_api(id):
+	if len(id)== 11:
+		t1 = bin(int(id[len(id) - 7:])).lstrip('0b').rjust(20,'0')+'0'
+		t2 = '00110001000110'+t1
+		t3 = hex(int(t2,2)).upper().lstrip('0X')
+		return(t3)
+	else:
+		t1 = hex(struct.unpack('<I',struct.pack('>I',int(id)))[0])
+		t2 = t1.lstrip('0x').upper()
+		return(t2)
 
 
 # Get site info
@@ -165,7 +189,10 @@ def handle_card_tap(event):
 	window.update()
 	an = 'na'
 	tmp_id = entry_tap.get().lower()
-	card_id = tmp_id.split('=')[1]
+	if (not use_hid):
+		card_id = tmp_id.split('=')[1]
+	else:
+		card_id = hid_to_api(tmp_id)
 	logging.debug('processing card tap %s',card_id)
 	kerb_id = card_to_kerb(card_id)
 	if (kerb_id == 'INVALID_ID' or kerb_id == None): # restart if invalid card or Kerberos ID
