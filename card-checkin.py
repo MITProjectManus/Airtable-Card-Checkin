@@ -154,6 +154,8 @@ def check_in(user,answer):
 	time.sleep(3)
 	
 def check_out(user):
+	entry_tap.config(state=tk.DISABLED)
+	window.focus()
 	frm_screen_1.pack_forget()
 	frm_notify.pack(pady=(200,0))
 	notify_message.config(text = 'One moment...')
@@ -181,7 +183,11 @@ def check_out(user):
 def handle_card_tap(event):
 	global kerb_id
 	global an
+	print(event)
+	logging.debug('Processing a card tap event')
 	# Put up a 'One moment...' screen
+	entry_tap.config(state=tk.DISABLED)
+	window.focus()
 	frm_screen_1.pack_forget()
 	frm_notify.pack(pady=(200,0))
 	notify_message.config(text = 'One moment...')
@@ -204,6 +210,8 @@ def handle_card_tap(event):
 		time.sleep(5)
 		frm_invalid_id.pack_forget()
 		frm_screen_1.pack(pady=(200,0))
+		entry_tap.config(state=tk.NORMAL)
+		entry_tap.focus()
 		window.update_idletasks()
 		window.update()
 	else:
@@ -236,6 +244,8 @@ def handle_card_tap(event):
 				check_in(kerb_id,'na')
 			frm_notify.pack_forget()
 			frm_screen_1.pack(pady=(200,0))
+			entry_tap.config(state=tk.NORMAL)
+			entry_tap.focus()
 			window.update_idletasks()
 			window.update()
 		else:
@@ -243,6 +253,8 @@ def handle_card_tap(event):
 			check_out(kerb_id)
 			frm_notify.pack_forget()
 			frm_screen_1.pack(pady=(200,0))
+			entry_tap.config(state=tk.NORMAL)
+			entry_tap.focus()
 			window.update_idletasks()
 			window.update()
 
@@ -259,6 +271,8 @@ def handle_answer(ans):
 	check_in(kerb_id,an)
 	frm_notify.pack_forget()
 	frm_screen_1.pack(pady=(200,0))
+	entry_tap.config(state=tk.NORMAL)
+	entry_tap.focus()
 	entry_tap.delete(0,tk.END)
 	entry_tap.focus_set()
 	window.update_idletasks()
