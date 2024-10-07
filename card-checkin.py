@@ -54,8 +54,11 @@ def hid_to_api(id):
 		t3 = hex(int(t2,2)).upper().lstrip('0X')
 		return(t3)
 	else:
-		t1 = hex(struct.unpack('<I',struct.pack('>I',int(id)))[0])
-		t2 = t1.lstrip('0x').upper()
+		try:
+			t1 = hex(struct.unpack('<I',struct.pack('>I',int(id)))[0])
+			t2 = t1.lstrip('0x').upper()
+		except ValueError:
+			t2 = ''
 		return(t2)
 
 
@@ -196,7 +199,11 @@ def handle_card_tap(event):
 	an = 'na'
 	tmp_id = entry_tap.get().lower()
 	if (not use_hid):
-		card_id = tmp_id.split('=')[1]
+		try:
+			card_id = tmp_id.split('=')[1]
+		except IndexError:
+			logging.debug('invalid card tap %s',tmp_id)
+			card_id = ''
 	else:
 		card_id = hid_to_api(tmp_id)
 	logging.debug('processing card tap %s',card_id)
